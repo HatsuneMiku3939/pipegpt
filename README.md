@@ -1,4 +1,4 @@
-> This README is generated from pipegpt itself.
+> This README is generated from pipegpt itself. modified by hand.
 >
 > cat cmd/pipegpt/cmd/root.go | pipegpt -p "give me a README.md" > README.md
 
@@ -8,7 +8,7 @@ pipegpt is a simple command-line tool for interacting with OpenAI GPT-3 using ch
 
 ## Installation
 
-You can install pipegpt by running `go get github.com/HatsuneMiku3939/pipegpt/cmd/pipegpt`.
+You can install pipegpt by running `go install github.com/HatsuneMiku3939/pipegpt/cmd/pipegpt@latest`.
 
 ## Usage
 
