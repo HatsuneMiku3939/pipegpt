@@ -1,4 +1,5 @@
 > This README is generated from pipegpt itself.
+>
 > cat cmd/pipegpt/cmd/root.go | pipegpt -p "give me a README.md" > README.md
 
 # pipegpt
