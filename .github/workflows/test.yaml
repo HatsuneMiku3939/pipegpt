@@ -1,0 +1,107 @@
+---
+name: Unit Test
+
+env:
+  GOVERSION: '1.19'
+  DIRENV_FILE: '.envrc'
+  TEST_COVERAGE_THRESHOLD: 80.0
+
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches-ignore: []
+
+jobs:
+  gomod:
+    name: Resolve go module dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Export Environment Variables
+        uses: HatsuneMiku3939/direnv-action@v1
+
+      - name: Download go module
+        run: go mod download
+
+      - name: Build tools for go module caching
+        run: make tools
+
+  test:
+    name: Unit Testing
+    runs-on: ubuntu-latest
+    needs:
+      - gomod
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Export Environment Variables
+        uses: HatsuneMiku3939/direnv-action@v1
+
+      - name: Test
+        run: make test/coverage
+
+      - name: Quality Gate - Test coverage
+        run: |
+          echo "Check test coverage is above the threshold $TEST_COVERAGE_THRESHOLD %"
+          totalCoverage=$(go tool cover -func=coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          echo "Test coverage : $totalCoverage %"
+          if (( $(echo "$totalCoverage $TEST_COVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
+            echo "OK"
+          else
+            echo "Failed: Test coverage is below threshold."
+            exit 1
+          fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs:
+      - gomod
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Export Environment Variables
+        uses: HatsuneMiku3939/direnv-action@v1
+
+      - name: Lint
+        run: make lint-ci

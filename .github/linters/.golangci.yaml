@@ -1,0 +1,75 @@
+---
+#########################
+#########################
+## Golang Linter rules ##
+#########################
+#########################
+
+# configure golangci-lint
+# https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - revive
+        - dupl
+        - gosec
+        - goconst
+        - gomnd
+    - path: test
+      linters:
+        - revive
+        - dupl
+        - gosec
+        - goconst
+        - gomnd
+        - bodyclose
+    - path: pkg/testreport
+      linters:
+        - gomnd
+linters:
+  enable:
+    - revive
+    - gosec
+    - unconvert
+    - gocyclo
+    - goconst
+    - goimports
+    - gocritic
+    - misspell
+    - govet
+    - gofmt
+    - noctx
+    - bodyclose
+    - unused
+    - exhaustive
+    - rowserrcheck
+    - gomnd
+    - dupl
+    - staticcheck
+    - sqlclosecheck
+    - containedctx
+    - contextcheck
+    - maintidx
+    - nestif
+linters-settings:
+  errcheck:
+    # report about assignment of errors to blank identifier:
+    #   `num, _ := strconv.Atoi(numStr)`;
+    # default is false: such cases aren't reported by default.
+    check-blank: true
+  govet:
+    # report about shadowed variables
+    check-shadowing: true
+  gocyclo:
+    # minimal code complexity to report, 30 by default
+    min-complexity: 30
+  gomnd:
+    settings:
+      mnd:
+        # don't include the "operation" and "assign"
+        checks: argument,case,condition,return
+
+# output configuration options
+output:
+  format: github-actions
