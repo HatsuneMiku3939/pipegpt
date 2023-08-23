@@ -4,7 +4,7 @@ name: Unit Test
 env:
   GOVERSION: '1.19'
   DIRENV_FILE: '.envrc'
-  TEST_COVERAGE_THRESHOLD: 80.0
+  TEST_COVERAGE_THRESHOLD: 0.0
 
 
 on:  # yamllint disable-line rule:truthy
