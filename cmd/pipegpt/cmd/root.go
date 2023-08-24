@@ -77,7 +77,9 @@ func initFlag() {
 	// define prompt flag of rootCmd
 	RootCmd.PersistentFlags().StringP("key", "k", "", "OpenAI API key, you can also set it with PIPEGPT_API_KEY environment variable or config file")
 	RootCmd.PersistentFlags().StringP("model", "m", "gpt-4", "OpenAI API model, you can also set it with PIPEGPT_API_MODEL environment variable or config file")
-	RootCmd.PersistentFlags().StringP("timeout", "t", "240s", "timeout of OpenAI API request, you can also set it with PIPEGPT_API_TIMEOUT environment variable or config file")
+	RootCmd.PersistentFlags().StringP("timeout", "t", "240s", "Timeout of OpenAI API request, you can also set it with PIPEGPT_API_TIMEOUT environment variable or config file")
+	RootCmd.PersistentFlags().StringP("endpoint", "e", "", "Endpoint of Azure OpenAI API, you can also set it with PIPEGPT_API_ENDPOINT environment variable or config file")
+	RootCmd.PersistentFlags().StringP("conversion", "c", "", "comma separated list of model conversion table of Azure OpenAI API. ex) 'gpt-4=foo-gpt-4, gpt-3=bar-gpt-3'")
 	RootCmd.Flags().StringP("role", "r", defaultRole, "role of the AI assistant, you can also set it with PIPEGPT_DEFAULT_ROLE environment variable or config file")
 	RootCmd.Flags().StringP("prompt", "p", "", "prompt to use for the AI assistant")
 	if err := RootCmd.MarkFlagRequired("prompt"); err != nil {
@@ -97,6 +99,16 @@ func initFlag() {
 	}
 
 	if err := viper.BindPFlag("api.timeout", RootCmd.PersistentFlags().Lookup("timeout")); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := viper.BindPFlag("api.endpoint", RootCmd.PersistentFlags().Lookup("endpoint")); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := viper.BindPFlag("api.conversion", RootCmd.PersistentFlags().Lookup("conversion")); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -145,7 +157,18 @@ func init() {
 
 // createClient is function to create chatgpt client
 func createClient() (*chatgpt.Client, error) {
-	// get other arguments from viper
+	// if endpoint is set, create azure openai client
+	if viper.GetString("api.endpoint") != "" {
+		return createAzureOpenAIClient()
+	}
+
+	// otherwise, create openai client
+	return createOpenAIClient()
+}
+
+// createOpenAIClient is function to create openai client
+func createOpenAIClient() (*chatgpt.Client, error) {
+	// get arguments from viper
 	key := viper.GetString("api.key")
 	timeout, err := time.ParseDuration(viper.GetString("api.timeout"))
 	if err != nil {
@@ -155,5 +178,34 @@ func createClient() (*chatgpt.Client, error) {
 
 	// create client
 	client := chatgpt.NewClient(key, model, timeout)
+	return client, nil
+}
+
+// createAzureOpenAIClient is function to create azure openai client
+func createAzureOpenAIClient() (*chatgpt.Client, error) {
+	// get arguments from viper
+	key := viper.GetString("api.key")
+	endpoint := viper.GetString("api.endpoint")
+	timeout, err := time.ParseDuration(viper.GetString("api.timeout"))
+	if err != nil {
+		return nil, err
+	}
+	model := viper.GetString("api.model")
+	rawModelMap := viper.GetString("api.conversion")
+
+	// create model map
+	const requiredConversionTokenCount = 2
+	modelMap := map[string]string{}
+	for _, v := range strings.Split(rawModelMap, ",") {
+		v = strings.TrimSpace(v)
+		kv := strings.Split(v, "=")
+		if len(kv) != requiredConversionTokenCount {
+			return nil, fmt.Errorf("'api.conversion' must be a key-value pair separated by '='")
+		}
+		modelMap[kv[0]] = kv[1]
+	}
+
+	// create client
+	client := chatgpt.NewAzureOpenAIClient(key, endpoint, model, modelMap, timeout)
 	return client, nil
 }
