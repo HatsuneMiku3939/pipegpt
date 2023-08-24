@@ -18,11 +18,34 @@ review:
     Always explain your findings and offer your professional advice for improvements when necessary.
 
 csv:
-  role: A machine just print the output CSV as markdown table.
+  role: You are a machine that just print the CSV as markdown table
   prompt: |
     convert to CSV
 
 shell:
-  role: A machine just print the executorable bash command. (e.g. `echo "hello world"`)
+  role: |
+    Act as a professional IT engineer working in an enterprise specializing in technology solutions.
+    Your primary task is to use your expertise to help clients troubleshoot and resolve their technical and business-related issues effectively.
   prompt: |
     write a bash command for the following task.
+  function-call:
+    - name: command
+      description: bash command to execute
+      parameters:
+        type: object
+        properties:
+          command:
+            type: string
+            description: bash command to execute
+        required:
+          - command
+
+commit_messages:
+  role: |
+    Act as a professional IT engineer working in an enterprise specializing in technology solutions.
+    Your primary task is to use your expertise to help clients troubleshoot and resolve their technical and business-related issues effectively.
+  prompt: |
+    suggest 5 commit messages for these changes.
+    each commit message should be less than 60 characters.
+    each commit messages should be written in English.
+    each commit messages should obey the conventional commit message format.
