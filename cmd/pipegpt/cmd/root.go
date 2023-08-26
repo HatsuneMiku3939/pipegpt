@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HatsuneMiku3939/pipegpt/app/chat"
 	"github.com/HatsuneMiku3939/pipegpt/app/generic"
 	"github.com/HatsuneMiku3939/pipegpt/pkg/chatgpt"
 	"github.com/HatsuneMiku3939/pipegpt/pkg/in"
@@ -51,8 +52,19 @@ cat sample.json | pipegpt -p "convert JSON to YAML"
 			os.Exit(1)
 		}
 
+		chatEnabled, err := cmd.Flags().GetBool("chat")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 		role := viper.GetString("default.role")
-		input := in.New(os.Stdin).Consume(byte('\n'))
+		i := in.New(os.Stdin)
+		input, err := i.Consume()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
 		client, err := createClient()
 		if err != nil {
@@ -67,7 +79,20 @@ cat sample.json | pipegpt -p "convert JSON to YAML"
 		}
 
 		// print result with markdown formatter
-		out.New(os.Stdout, out.MarkdownFormatter).Emit(result)
+		o := out.New(os.Stdout, out.MarkdownFormatter)
+		if !chatEnabled {
+			o.Emit(result)
+			return
+		}
+
+		// interactive chat mode
+		history, err := chat.CreateChatHistory(role, prompt, input, result)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		chat.New(client, o, history).Run()
 	},
 }
 
@@ -81,7 +106,8 @@ func initFlag() {
 	RootCmd.PersistentFlags().StringP("model", "m", "gpt-4", "OpenAI API model, you can also set it with PIPEGPT_API_MODEL environment variable or config file")
 	RootCmd.PersistentFlags().StringP("timeout", "t", "240s", "Timeout of OpenAI API request, you can also set it with PIPEGPT_API_TIMEOUT environment variable or config file")
 	RootCmd.PersistentFlags().StringP("endpoint", "e", "", "Endpoint of Azure OpenAI API, you can also set it with PIPEGPT_API_ENDPOINT environment variable or config file")
-	RootCmd.PersistentFlags().StringP("conversion", "c", "", "comma separated list of model conversion table of Azure OpenAI API. ex) 'gpt-4=foo-gpt-4, gpt-3=bar-gpt-3'")
+	RootCmd.PersistentFlags().String("conversion", "", "comma separated list of model conversion table of Azure OpenAI API. ex) 'gpt-4=foo-gpt-4, gpt-3=bar-gpt-3'")
+	RootCmd.PersistentFlags().BoolP("chat", "c", false, "interactive chat mode enable (default is false)")
 	RootCmd.Flags().StringP("role", "r", defaultRole, "role of the AI assistant, you can also set it with PIPEGPT_DEFAULT_ROLE environment variable or config file")
 	RootCmd.Flags().StringP("prompt", "p", "", "prompt to use for the AI assistant")
 	if err := RootCmd.MarkFlagRequired("prompt"); err != nil {

@@ -86,3 +86,71 @@ func (gpt *Client) FunctionCall(role string, prompt string, input string, funcs 
 
 	return args, nil
 }
+
+// Chat
+func (gpt *Client) Chat(history []openai.ChatCompletionMessage, input string) (string, error) {
+	// create chat completion
+	ctx, cancel := context.WithTimeout(context.Background(), gpt.timeout)
+	defer cancel()
+
+	// create chat completion
+	history = append(history, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: input,
+	})
+	resp, err := gpt.client.CreateChatCompletion(
+		ctx,
+		openai.ChatCompletionRequest{
+			Model:    gpt.model,
+			Messages: history,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	// return first choice
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("no choices returned")
+	}
+
+	return resp.Choices[0].Message.Content, nil
+}
+
+// CreateChatHistory creates chat history from role, prompt, user input and first response
+func CreateChatHistory(role string, prompt string, input string, response interface{}) ([]openai.ChatCompletionMessage, error) {
+	history := []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: role,
+		},
+		{
+			Role:    openai.ChatMessageRoleUser,
+			Content: prompt,
+		},
+		{
+			Role:    openai.ChatMessageRoleUser,
+			Content: fmt.Sprintf("```\n%s\n```", input),
+		},
+	}
+
+	switch response := response.(type) {
+	case string:
+		history = append(history, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleAssistant,
+			Content: response,
+		})
+	case map[string]interface{}:
+		raw, err := json.Marshal(response)
+		if err != nil {
+			return []openai.ChatCompletionMessage{}, err
+		}
+
+		history = append(history, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleAssistant,
+			Content: fmt.Sprintf("```\n%s\n```", string(raw)),
+		})
+	}
+
+	return history, nil
+}
