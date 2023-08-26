@@ -8,7 +8,8 @@ import (
 
 	"github.com/HatsuneMiku3939/pipegpt/app/generic"
 	"github.com/HatsuneMiku3939/pipegpt/pkg/chatgpt"
-	"github.com/HatsuneMiku3939/pipegpt/pkg/stdin"
+	"github.com/HatsuneMiku3939/pipegpt/pkg/in"
+	"github.com/HatsuneMiku3939/pipegpt/pkg/out"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -51,7 +52,7 @@ cat sample.json | pipegpt -p "convert JSON to YAML"
 		}
 
 		role := viper.GetString("default.role")
-		input := stdin.ConsumeStdin()
+		input := in.New(os.Stdin).Consume(byte('\n'))
 
 		client, err := createClient()
 		if err != nil {
@@ -65,7 +66,8 @@ cat sample.json | pipegpt -p "convert JSON to YAML"
 			os.Exit(1)
 		}
 
-		fmt.Println(result)
+		// print result with markdown formatter
+		out.New(os.Stdout, out.MarkdownFormatter).Emit(result)
 	},
 }
 

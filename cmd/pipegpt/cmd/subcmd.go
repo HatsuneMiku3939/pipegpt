@@ -8,7 +8,8 @@ import (
 
 	"github.com/HatsuneMiku3939/pipegpt/app/function"
 	"github.com/HatsuneMiku3939/pipegpt/app/generic"
-	"github.com/HatsuneMiku3939/pipegpt/pkg/stdin"
+	"github.com/HatsuneMiku3939/pipegpt/pkg/in"
+	"github.com/HatsuneMiku3939/pipegpt/pkg/out"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
@@ -70,7 +71,7 @@ func createGenericSubcommand(name string, definition map[string]interface{}) err
 		Run: func(cmd *cobra.Command, args []string) {
 			prompt := viper.GetString(fmt.Sprintf("%s.prompt", name))
 			role := viper.GetString(fmt.Sprintf("%s.role", name))
-			input := stdin.ConsumeStdin()
+			input := in.New(os.Stdin).Consume(byte('\n'))
 
 			client, err := createClient()
 			if err != nil {
@@ -84,16 +85,17 @@ func createGenericSubcommand(name string, definition map[string]interface{}) err
 				os.Exit(1)
 			}
 
-			fmt.Println(result)
+			// print result with markdown formatter
+			out.New(os.Stdout, out.MarkdownFormatter).Emit(result)
 		},
 	}
 
 	// add flags
 	subcmd.Flags().StringP("role", "r", "",
-		fmt.Sprintf("role for the AI assistant, you can also set it with PIPEGPT_%s_ROLE environment variable or config file, name", strings.ToUpper(name)),
+		fmt.Sprintf("role for the AI assistant, you can also set it with PIPEGPT_%s_ROLE environment variable or config file", strings.ToUpper(name)),
 	)
 	subcmd.Flags().StringP("prompt", "p", "",
-		fmt.Sprintf("prompt for the AI assistant, you can also set it with PIPEGPT_%s_PROMPT environment variable or config file, name", strings.ToUpper(name)),
+		fmt.Sprintf("prompt for the AI assistant, you can also set it with PIPEGPT_%s_PROMPT environment variable or config file", strings.ToUpper(name)),
 	)
 
 	// bind flags to viper
@@ -130,7 +132,7 @@ func createFunctionCallCommand(name string, definition map[string]interface{}) e
 		Run: func(cmd *cobra.Command, args []string) {
 			prompt := viper.GetString(fmt.Sprintf("%s.prompt", name))
 			role := viper.GetString(fmt.Sprintf("%s.role", name))
-			input := stdin.ConsumeStdin()
+			input := in.New(os.Stdin).Consume(byte('\n'))
 
 			client, err := createClient()
 			if err != nil {
@@ -156,10 +158,10 @@ func createFunctionCallCommand(name string, definition map[string]interface{}) e
 
 	// add flags
 	subcmd.Flags().StringP("role", "r", "",
-		fmt.Sprintf("role for the AI assistant, you can also set it with PIPEGPT_%s_ROLE environment variable or config file, name", strings.ToUpper(name)),
+		fmt.Sprintf("role for the AI assistant, you can also set it with PIPEGPT_%s_ROLE environment variable or config file", strings.ToUpper(name)),
 	)
 	subcmd.Flags().StringP("prompt", "p", "",
-		fmt.Sprintf("prompt for the AI assistant, you can also set it with PIPEGPT_%s_PROMPT environment variable or config file, name", strings.ToUpper(name)),
+		fmt.Sprintf("prompt for the AI assistant, you can also set it with PIPEGPT_%s_PROMPT environment variable or config file", strings.ToUpper(name)),
 	)
 
 	// bind flags to viper
