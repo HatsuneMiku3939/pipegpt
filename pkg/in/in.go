@@ -2,6 +2,7 @@ package in
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 )
 
@@ -15,19 +16,45 @@ func New(in *os.File) *In {
 	return &In{In: in}
 }
 
-// Consume reads from the input source until break character is encountered.
-func (i *In) Consume(breakChar byte) string {
+// Consume reads from the input source until EOF
+func (i *In) Consume() (string, error) {
 	scanner := bufio.NewScanner(i.In)
 	var input string
 	for scanner.Scan() {
-		input += scanner.Text() + "\n"
-
-		// if break character is encountered, break
-		bytes := scanner.Bytes()
-		if len(bytes) > 1 && bytes[len(bytes)-1] == breakChar {
-			break
+		err := scanner.Err()
+		if err != nil {
+			return "", err
 		}
+
+		input += scanner.Text() + "\n"
 	}
 
-	return input
+	return input, nil
+}
+
+// Consume reads from the input source until stopword is encountered
+func (i *In) ConsumeUntil(prompt string, stopword string, callback func(string, error)) {
+	// show prompt
+	fmt.Printf("%s", prompt)
+
+	// read from input
+	scanner := bufio.NewScanner(i.In)
+	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			callback("", err)
+
+			// show prompt
+			fmt.Printf("%s", prompt)
+			continue
+		}
+		text := scanner.Text()
+		if text == stopword {
+			break
+		}
+
+		callback(text, nil)
+
+		// show prompt
+		fmt.Printf("%s", prompt)
+	}
 }

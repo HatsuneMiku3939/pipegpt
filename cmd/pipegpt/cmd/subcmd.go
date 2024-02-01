@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/HatsuneMiku3939/pipegpt/app/chat"
 	"github.com/HatsuneMiku3939/pipegpt/app/function"
 	"github.com/HatsuneMiku3939/pipegpt/app/generic"
 	"github.com/HatsuneMiku3939/pipegpt/pkg/in"
@@ -69,9 +70,19 @@ func createGenericSubcommand(name string, definition map[string]interface{}) err
 		Use:   name,
 		Short: fmt.Sprintf("Ask a question with predefined role and prompt for %s task", name),
 		Run: func(cmd *cobra.Command, args []string) {
+			chatModeEnabled, err := cmd.Flags().GetBool("chat")
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
 			prompt := viper.GetString(fmt.Sprintf("%s.prompt", name))
 			role := viper.GetString(fmt.Sprintf("%s.role", name))
-			input := in.New(os.Stdin).Consume(byte('\n'))
+			input, err := in.New(os.Stdin).Consume()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 
 			client, err := createClient()
 			if err != nil {
@@ -86,7 +97,20 @@ func createGenericSubcommand(name string, definition map[string]interface{}) err
 			}
 
 			// print result with markdown formatter
-			out.New(os.Stdout, out.MarkdownFormatter).Emit(result)
+			o := out.New(os.Stdout, out.MarkdownFormatter)
+			if !chatModeEnabled {
+				o.Emit(result)
+				return
+			}
+
+			// interactive chat mode
+			history, err := chat.CreateChatHistory(role, prompt, input, result)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			chat.New(client, o, history).Run()
 		},
 	}
 
@@ -130,9 +154,19 @@ func createFunctionCallCommand(name string, definition map[string]interface{}) e
 		Use:   name,
 		Short: fmt.Sprintf("Ask a question with predefined role and prompt for %s task", name),
 		Run: func(cmd *cobra.Command, args []string) {
+			chatModeEnabled, err := cmd.Flags().GetBool("chat")
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
 			prompt := viper.GetString(fmt.Sprintf("%s.prompt", name))
 			role := viper.GetString(fmt.Sprintf("%s.role", name))
-			input := in.New(os.Stdin).Consume(byte('\n'))
+			input, err := in.New(os.Stdin).Consume()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 
 			client, err := createClient()
 			if err != nil {
@@ -152,7 +186,19 @@ func createFunctionCallCommand(name string, definition map[string]interface{}) e
 				os.Exit(1)
 			}
 
-			fmt.Println(string(raw))
+			if !chatModeEnabled {
+				fmt.Println(string(raw))
+			}
+
+			// interactive chat mode
+			o := out.New(os.Stdout, out.MarkdownFormatter)
+			history, err := chat.CreateChatHistory(role, prompt, input, result)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			chat.New(client, o, history).Run()
 		},
 	}
 
